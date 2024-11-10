@@ -46,15 +46,22 @@ func (s *APIV1Service) GetWorkspaceSetting(ctx context.Context, request *v1pb.Ge
 		return nil, status.Errorf(codes.NotFound, "workspace setting not found")
 	}
 
+	// For storage setting, only host can get it.
+	if workspaceSetting.Key == storepb.WorkspaceSettingKey_STORAGE {
+		user, err := s.GetCurrentUser(ctx)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "failed to get current user: %v", err)
+		}
+		if user == nil || user.Role != store.RoleHost {
+			return nil, status.Errorf(codes.PermissionDenied, "permission denied")
+		}
+	}
+
 	return convertWorkspaceSettingFromStore(workspaceSetting), nil
 }
 
 func (s *APIV1Service) SetWorkspaceSetting(ctx context.Context, request *v1pb.SetWorkspaceSettingRequest) (*v1pb.WorkspaceSetting, error) {
-	if s.Profile.Mode == "demo" {
-		return nil, status.Errorf(codes.InvalidArgument, "setting workspace setting is not allowed in demo mode")
-	}
-
-	user, err := getCurrentUser(ctx, s.Store)
+	user, err := s.GetCurrentUser(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get current user: %v", err)
 	}
@@ -62,7 +69,14 @@ func (s *APIV1Service) SetWorkspaceSetting(ctx context.Context, request *v1pb.Se
 		return nil, status.Errorf(codes.PermissionDenied, "permission denied")
 	}
 
-	workspaceSetting, err := s.Store.UpsertWorkspaceSetting(ctx, convertWorkspaceSettingToStore(request.Setting))
+	updateSetting := convertWorkspaceSettingToStore(request.Setting)
+	// Don't allow to update workspace general setting in demo mode.
+	// Such as disallow user registration, disallow password auth, etc.
+	if s.Profile.Mode == "demo" && updateSetting.Key == storepb.WorkspaceSettingKey_GENERAL {
+		return nil, status.Errorf(codes.InvalidArgument, "setting workspace setting is not allowed in demo mode")
+	}
+
+	workspaceSetting, err := s.Store.UpsertWorkspaceSetting(ctx, updateSetting)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to upsert workspace setting: %v", err)
 	}
@@ -121,11 +135,13 @@ func convertWorkspaceGeneralSettingFromStore(setting *storepb.WorkspaceGeneralSe
 		return nil
 	}
 	generalSetting := &v1pb.WorkspaceGeneralSetting{
-		InstanceUrl:           setting.InstanceUrl,
-		DisallowSignup:        setting.DisallowSignup,
-		DisallowPasswordLogin: setting.DisallowPasswordLogin,
-		AdditionalScript:      setting.AdditionalScript,
-		AdditionalStyle:       setting.AdditionalStyle,
+		DisallowUserRegistration: setting.DisallowUserRegistration,
+		DisallowPasswordAuth:     setting.DisallowPasswordAuth,
+		AdditionalScript:         setting.AdditionalScript,
+		AdditionalStyle:          setting.AdditionalStyle,
+		WeekStartDayOffset:       setting.WeekStartDayOffset,
+		DisallowChangeUsername:   setting.DisallowChangeUsername,
+		DisallowChangeNickname:   setting.DisallowChangeNickname,
 	}
 	if setting.CustomProfile != nil {
 		generalSetting.CustomProfile = &v1pb.WorkspaceCustomProfile{
@@ -144,11 +160,13 @@ func convertWorkspaceGeneralSettingToStore(setting *v1pb.WorkspaceGeneralSetting
 		return nil
 	}
 	generalSetting := &storepb.WorkspaceGeneralSetting{
-		InstanceUrl:           setting.InstanceUrl,
-		DisallowSignup:        setting.DisallowSignup,
-		DisallowPasswordLogin: setting.DisallowPasswordLogin,
-		AdditionalScript:      setting.AdditionalScript,
-		AdditionalStyle:       setting.AdditionalStyle,
+		DisallowUserRegistration: setting.DisallowUserRegistration,
+		DisallowPasswordAuth:     setting.DisallowPasswordAuth,
+		AdditionalScript:         setting.AdditionalScript,
+		AdditionalStyle:          setting.AdditionalStyle,
+		WeekStartDayOffset:       setting.WeekStartDayOffset,
+		DisallowChangeUsername:   setting.DisallowChangeUsername,
+		DisallowChangeNickname:   setting.DisallowChangeNickname,
 	}
 	if setting.CustomProfile != nil {
 		generalSetting.CustomProfile = &storepb.WorkspaceCustomProfile{
@@ -209,9 +227,17 @@ func convertWorkspaceMemoRelatedSettingFromStore(setting *storepb.WorkspaceMemoR
 		return nil
 	}
 	return &v1pb.WorkspaceMemoRelatedSetting{
-		DisallowPublicVisible: setting.DisallowPublicVisible,
-		DisplayWithUpdateTime: setting.DisplayWithUpdateTime,
-		ContentLengthLimit:    setting.ContentLengthLimit,
+		DisallowPublicVisibility: setting.DisallowPublicVisibility,
+		DisplayWithUpdateTime:    setting.DisplayWithUpdateTime,
+		ContentLengthLimit:       setting.ContentLengthLimit,
+		EnableAutoCompact:        setting.EnableAutoCompact,
+		EnableDoubleClickEdit:    setting.EnableDoubleClickEdit,
+		EnableLinkPreview:        setting.EnableLinkPreview,
+		EnableComment:            setting.EnableComment,
+		EnableLocation:           setting.EnableLocation,
+		DefaultVisibility:        setting.DefaultVisibility,
+		Reactions:                setting.Reactions,
+		DisableMarkdownShortcuts: setting.DisableMarkdownShortcuts,
 	}
 }
 
@@ -220,8 +246,16 @@ func convertWorkspaceMemoRelatedSettingToStore(setting *v1pb.WorkspaceMemoRelate
 		return nil
 	}
 	return &storepb.WorkspaceMemoRelatedSetting{
-		DisallowPublicVisible: setting.DisallowPublicVisible,
-		DisplayWithUpdateTime: setting.DisplayWithUpdateTime,
-		ContentLengthLimit:    setting.ContentLengthLimit,
+		DisallowPublicVisibility: setting.DisallowPublicVisibility,
+		DisplayWithUpdateTime:    setting.DisplayWithUpdateTime,
+		ContentLengthLimit:       setting.ContentLengthLimit,
+		EnableAutoCompact:        setting.EnableAutoCompact,
+		EnableDoubleClickEdit:    setting.EnableDoubleClickEdit,
+		EnableLinkPreview:        setting.EnableLinkPreview,
+		EnableComment:            setting.EnableComment,
+		EnableLocation:           setting.EnableLocation,
+		DefaultVisibility:        setting.DefaultVisibility,
+		Reactions:                setting.Reactions,
+		DisableMarkdownShortcuts: setting.DisableMarkdownShortcuts,
 	}
 }

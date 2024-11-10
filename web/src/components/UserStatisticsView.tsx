@@ -1,66 +1,142 @@
-import { useEffect, useState } from "react";
-import { memoServiceClient } from "@/grpcweb";
-import { useMemoStore, useTagStore } from "@/store/v1";
-import { User } from "@/types/proto/api/v1/user_service";
+import { Divider, Tooltip } from "@mui/joy";
+import clsx from "clsx";
+import dayjs from "dayjs";
+import { countBy } from "lodash-es";
+import { CalendarDaysIcon, CheckCircleIcon, ChevronLeftIcon, ChevronRightIcon, Code2Icon, LinkIcon, ListTodoIcon } from "lucide-react";
+import { useState } from "react";
+import useAsyncEffect from "@/hooks/useAsyncEffect";
+import useCurrentUser from "@/hooks/useCurrentUser";
+import i18n from "@/i18n";
+import { useMemoFilterStore, useMemoMetadataStore } from "@/store/v1";
 import { useTranslate } from "@/utils/i18n";
-import Icon from "./Icon";
+import ActivityCalendar from "./ActivityCalendar";
 
-interface Props {
-  user: User;
+interface UserMemoStats {
+  link: number;
+  taskList: number;
+  code: number;
+  incompleteTasks: number;
 }
 
-const UserStatisticsView = (props: Props) => {
-  const { user } = props;
+const UserStatisticsView = () => {
   const t = useTranslate();
-  const tagStore = useTagStore();
-  const memoStore = useMemoStore();
+  const currentUser = useCurrentUser();
+  const memoFilterStore = useMemoFilterStore();
+  const memoMetadataStore = useMemoMetadataStore();
+  const metadataList = Object.values(memoMetadataStore.getState().dataMapByName);
   const [memoAmount, setMemoAmount] = useState(0);
-  const [isRequesting, setIsRequesting] = useState(false);
-  const days = Math.ceil((Date.now() - user.createTime!.getTime()) / 86400000);
-  const memos = Object.values(memoStore.getState().memoMapByName);
-  const tags = tagStore.sortedTags().length;
+  const [memoStats, setMemoStats] = useState<UserMemoStats>({ link: 0, taskList: 0, code: 0, incompleteTasks: 0 });
+  const [activityStats, setActivityStats] = useState<Record<string, number>>({});
+  const [selectedDate] = useState(new Date());
+  const [visibleMonthString, setVisibleMonthString] = useState(dayjs(selectedDate.toDateString()).format("YYYY-MM"));
+  const days = Math.ceil((Date.now() - currentUser.createTime!.getTime()) / 86400000);
 
-  useEffect(() => {
-    if (memos.length === 0) {
-      return;
-    }
+  useAsyncEffect(async () => {
+    const memoStats: UserMemoStats = { link: 0, taskList: 0, code: 0, incompleteTasks: 0 };
+    metadataList.forEach((memo) => {
+      const { property } = memo;
+      if (property?.hasLink) {
+        memoStats.link += 1;
+      }
+      if (property?.hasTaskList) {
+        memoStats.taskList += 1;
+      }
+      if (property?.hasCode) {
+        memoStats.code += 1;
+      }
+      if (property?.hasIncompleteTasks) {
+        memoStats.incompleteTasks += 1;
+      }
+    });
+    setMemoStats(memoStats);
+    setMemoAmount(metadataList.length);
+    setActivityStats(countBy(metadataList.map((memo) => dayjs(memo.displayTime).format("YYYY-MM-DD"))));
+  }, [memoMetadataStore.stateId]);
 
-    (async () => {
-      setIsRequesting(true);
-      const { stats } = await memoServiceClient.getUserMemosStats({
-        name: user.name,
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      });
-      setIsRequesting(false);
-      setMemoAmount(Object.values(stats).reduce((acc, cur) => acc + cur, 0));
-    })();
-  }, [memos.length, user.name]);
+  const onCalendarClick = (date: string) => {
+    memoFilterStore.removeFilter((f) => f.factor === "displayTime");
+    memoFilterStore.addFilter({ factor: "displayTime", value: date });
+  };
 
   return (
-    <div className="w-full border mt-2 py-2 px-3 rounded-lg space-y-0.5 text-gray-500 dark:text-gray-400 bg-zinc-50 dark:bg-zinc-900 dark:border-zinc-800">
-      <div className="mb-1 w-full flex flex-row justify-between items-center">
-        <p className="text-sm font-medium leading-6 dark:text-gray-500">{t("common.statistics")}</p>
-      </div>
-      <div className="w-full flex justify-between items-center">
-        <div className="w-full flex justify-start items-center">
-          <Icon.CalendarDays className="w-4 h-auto mr-1" />
-          <span className="block text-base sm:text-sm">{t("common.days")}</span>
+    <div className="group w-full border mt-2 py-2 px-3 rounded-lg space-y-0.5 text-gray-500 dark:text-gray-400 bg-zinc-50 dark:bg-zinc-900 dark:border-zinc-800">
+      <div className="w-full mb-1 flex flex-row justify-between items-center gap-1">
+        <div className="relative text-sm font-medium inline-flex flex-row items-center w-auto dark:text-gray-400 truncate">
+          <CalendarDaysIcon className="w-4 h-auto mr-1 opacity-60 shrink-0" strokeWidth={1.5} />
+          <span className="truncate">
+            {dayjs(visibleMonthString).toDate().toLocaleString(i18n.language, { year: "numeric", month: "long" })}
+          </span>
         </div>
-        <span className="font-mono">{days}</span>
-      </div>
-      <div className="w-full flex justify-between items-center">
-        <div className="w-full flex justify-start items-center">
-          <Icon.Library className="w-4 h-auto mr-1" />
-          <span className="block text-base sm:text-sm">{t("common.memos")}</span>
+        <div className="flex justify-end items-center shrink-0">
+          <span
+            className="cursor-pointer hover:opacity-80"
+            onClick={() => setVisibleMonthString(dayjs(visibleMonthString).subtract(1, "month").format("YYYY-MM"))}
+          >
+            <ChevronLeftIcon className="w-4 h-auto shrink-0 opacity-60" />
+          </span>
+          <span
+            className="cursor-pointer hover:opacity-80"
+            onClick={() => setVisibleMonthString(dayjs(visibleMonthString).add(1, "month").format("YYYY-MM"))}
+          >
+            <ChevronRightIcon className="w-4 h-auto shrink-0 opacity-60" />
+          </span>
         </div>
-        {isRequesting ? <Icon.Loader className="animate-spin w-4 h-auto text-gray-400" /> : <span className="font-mono">{memoAmount}</span>}
       </div>
-      <div className="w-full flex justify-between items-center">
-        <div className="w-full flex justify-start items-center">
-          <Icon.Tags className="w-4 h-auto mr-1" />
-          <span className="block text-base sm:text-sm">{t("common.tags")}</span>
+      <div className="w-full">
+        <ActivityCalendar
+          month={visibleMonthString}
+          selectedDate={selectedDate.toDateString()}
+          data={activityStats}
+          onClick={onCalendarClick}
+        />
+        {memoAmount > 0 && (
+          <p className="mt-1 w-full text-xs italic opacity-80">
+            <span>{memoAmount}</span> memos in <span>{days}</span> {days > 1 ? "days" : "day"}
+          </p>
+        )}
+      </div>
+      <Divider className="!my-2 opacity-50" />
+      <div className="w-full flex flex-row justify-start items-center gap-x-2 gap-y-1 flex-wrap">
+        <div
+          className={clsx("w-auto border dark:border-zinc-800 pl-1 pr-1.5 rounded-md flex justify-between items-center")}
+          onClick={() => memoFilterStore.addFilter({ factor: "property.hasLink", value: "" })}
+        >
+          <div className="w-auto flex justify-start items-center mr-1">
+            <LinkIcon className="w-4 h-auto mr-1" />
+            <span className="block text-sm">{t("memo.links")}</span>
+          </div>
+          <span className="text-sm truncate">{memoStats.link}</span>
         </div>
-        <span className="font-mono">{tags}</span>
+        <div
+          className={clsx("w-auto border dark:border-zinc-800 pl-1 pr-1.5 rounded-md flex justify-between items-center")}
+          onClick={() => memoFilterStore.addFilter({ factor: "property.hasTaskList", value: "" })}
+        >
+          <div className="w-auto flex justify-start items-center mr-1">
+            {memoStats.incompleteTasks > 0 ? <ListTodoIcon className="w-4 h-auto mr-1" /> : <CheckCircleIcon className="w-4 h-auto mr-1" />}
+            <span className="block text-sm">{t("memo.to-do")}</span>
+          </div>
+          {memoStats.incompleteTasks > 0 ? (
+            <Tooltip title={"Done / Total"} placement="top" arrow>
+              <div className="text-sm flex flex-row items-start justify-center">
+                <span className="truncate">{memoStats.taskList - memoStats.incompleteTasks}</span>
+                <span className="font-mono opacity-50">/</span>
+                <span className="truncate">{memoStats.taskList}</span>
+              </div>
+            </Tooltip>
+          ) : (
+            <span className="text-sm truncate">{memoStats.taskList}</span>
+          )}
+        </div>
+        <div
+          className={clsx("w-auto border dark:border-zinc-800 pl-1 pr-1.5 rounded-md flex justify-between items-center")}
+          onClick={() => memoFilterStore.addFilter({ factor: "property.hasCode", value: "" })}
+        >
+          <div className="w-auto flex justify-start items-center mr-1">
+            <Code2Icon className="w-4 h-auto mr-1" />
+            <span className="block text-sm">{t("memo.code")}</span>
+          </div>
+          <span className="text-sm truncate">{memoStats.code}</span>
+        </div>
       </div>
     </div>
   );

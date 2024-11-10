@@ -17,14 +17,15 @@ func TestWorkspaceSettingV1Store(t *testing.T) {
 		Key: storepb.WorkspaceSettingKey_GENERAL,
 		Value: &storepb.WorkspaceSetting_GeneralSetting{
 			GeneralSetting: &storepb.WorkspaceGeneralSetting{
-				DisallowSignup: true,
+				AdditionalScript: "",
 			},
 		},
 	})
 	require.NoError(t, err)
-	list, err := ts.ListWorkspaceSettings(ctx, &store.FindWorkspaceSetting{})
+	setting, err := ts.GetWorkspaceSetting(ctx, &store.FindWorkspaceSetting{
+		Name: storepb.WorkspaceSettingKey_GENERAL.String(),
+	})
 	require.NoError(t, err)
-	require.Equal(t, 1, len(list))
-	require.Equal(t, workspaceSetting, list[0])
+	require.Equal(t, workspaceSetting, setting)
 	ts.Close()
 }

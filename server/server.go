@@ -4,12 +4,15 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math"
 	"net"
 	"net/http"
 	"time"
 
 	"github.com/google/uuid"
+	grpcrecovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"github.com/pkg/errors"
 	"github.com/soheilhy/cmux"
 	"google.golang.org/grpc"
@@ -19,8 +22,9 @@ import (
 	apiv1 "github.com/usememos/memos/server/router/api/v1"
 	"github.com/usememos/memos/server/router/frontend"
 	"github.com/usememos/memos/server/router/rss"
-	s3objectpresigner "github.com/usememos/memos/server/service/s3_object_presigner"
-	versionchecker "github.com/usememos/memos/server/service/version_checker"
+	"github.com/usememos/memos/server/runner/memoproperty"
+	"github.com/usememos/memos/server/runner/s3presign"
+	"github.com/usememos/memos/server/runner/version"
 	"github.com/usememos/memos/store"
 )
 
@@ -43,6 +47,7 @@ func NewServer(ctx context.Context, profile *profile.Profile, store *store.Store
 	echoServer.Debug = true
 	echoServer.HideBanner = true
 	echoServer.HidePort = true
+	echoServer.Use(middleware.Recover())
 	s.echoServer = echoServer
 
 	workspaceBasicSetting, err := s.getOrUpsertWorkspaceBasicSetting(ctx)
@@ -70,10 +75,11 @@ func NewServer(ctx context.Context, profile *profile.Profile, store *store.Store
 	rss.NewRSSService(s.Profile, s.Store).RegisterRoutes(rootGroup)
 
 	grpcServer := grpc.NewServer(
-		// Override the maximum receiving message size to 100M for uploading large resources.
-		grpc.MaxRecvMsgSize(100*1024*1024),
+		// Override the maximum receiving message size to math.MaxInt32 for uploading large resources.
+		grpc.MaxRecvMsgSize(math.MaxInt32),
 		grpc.ChainUnaryInterceptor(
 			apiv1.NewLoggerInterceptor().LoggerInterceptor,
+			grpcrecovery.UnaryServerInterceptor(),
 			apiv1.NewGRPCAuthInterceptor(store, secret).AuthenticationInterceptor,
 		))
 	s.grpcServer = grpcServer
@@ -98,19 +104,19 @@ func (s *Server) Start(ctx context.Context) error {
 	go func() {
 		grpcListener := muxServer.MatchWithWriters(cmux.HTTP2MatchHeaderFieldSendSettings("content-type", "application/grpc"))
 		if err := s.grpcServer.Serve(grpcListener); err != nil {
-			slog.Error("failed to serve gRPC", err)
+			slog.Error("failed to serve gRPC", "error", err)
 		}
 	}()
 	go func() {
-		httpListener := muxServer.Match(cmux.HTTP1Fast())
+		httpListener := muxServer.Match(cmux.HTTP1Fast(http.MethodPatch))
 		s.echoServer.Listener = httpListener
 		if err := s.echoServer.Start(address); err != nil {
-			slog.Error("failed to start echo server", err)
+			slog.Error("failed to start echo server", "error", err)
 		}
 	}()
 	go func() {
 		if err := muxServer.Serve(); err != nil {
-			slog.Error("mux server listen error", err)
+			slog.Error("mux server listen error", "error", err)
 		}
 	}()
 	s.StartBackgroundRunners(ctx)
@@ -124,20 +130,28 @@ func (s *Server) Shutdown(ctx context.Context) {
 
 	// Shutdown echo server.
 	if err := s.echoServer.Shutdown(ctx); err != nil {
-		fmt.Printf("failed to shutdown server, error: %v\n", err)
+		slog.Error("failed to shutdown server", slog.String("error", err.Error()))
 	}
 
 	// Close database connection.
 	if err := s.Store.Close(); err != nil {
-		fmt.Printf("failed to close database, error: %v\n", err)
+		slog.Error("failed to close database", slog.String("error", err.Error()))
 	}
 
-	fmt.Printf("memos stopped properly\n")
+	slog.Info("memos stopped properly")
 }
 
 func (s *Server) StartBackgroundRunners(ctx context.Context) {
-	go versionchecker.NewVersionChecker(s.Store, s.Profile).Start(ctx)
-	go s3objectpresigner.NewS3ObjectPresigner(s.Store).Start(ctx)
+	s3presignRunner := s3presign.NewRunner(s.Store)
+	s3presignRunner.RunOnce(ctx)
+	versionRunner := version.NewRunner(s.Store, s.Profile)
+	versionRunner.RunOnce(ctx)
+	memopropertyRunner := memoproperty.NewRunner(s.Store)
+	memopropertyRunner.RunOnce(ctx)
+
+	go s3presignRunner.Run(ctx)
+	go versionRunner.Run(ctx)
+	go memopropertyRunner.Run(ctx)
 }
 
 func (s *Server) getOrUpsertWorkspaceBasicSetting(ctx context.Context) (*storepb.WorkspaceBasicSetting, error) {

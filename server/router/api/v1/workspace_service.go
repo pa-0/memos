@@ -11,12 +11,11 @@ import (
 	"github.com/usememos/memos/store"
 )
 
-var ownerCache *v1pb.User
-
 func (s *APIV1Service) GetWorkspaceProfile(ctx context.Context, _ *v1pb.GetWorkspaceProfileRequest) (*v1pb.WorkspaceProfile, error) {
 	workspaceProfile := &v1pb.WorkspaceProfile{
-		Version: s.Profile.Version,
-		Mode:    s.Profile.Mode,
+		Version:     s.Profile.Version,
+		Mode:        s.Profile.Mode,
+		InstanceUrl: s.Profile.InstanceURL,
 	}
 	owner, err := s.GetInstanceOwner(ctx)
 	if err != nil {
@@ -27,6 +26,8 @@ func (s *APIV1Service) GetWorkspaceProfile(ctx context.Context, _ *v1pb.GetWorks
 	}
 	return workspaceProfile, nil
 }
+
+var ownerCache *v1pb.User
 
 func (s *APIV1Service) GetInstanceOwner(ctx context.Context) (*v1pb.User, error) {
 	if ownerCache != nil {

@@ -1,8 +1,9 @@
 import { createBrowserRouter } from "react-router-dom";
 import App from "@/App";
-import HomeLayout from "@/layouts/HomeLayout";
+import RootLayout from "@/layouts/RootLayout";
 import SuspenseWrapper from "@/layouts/SuspenseWrapper";
 import About from "@/pages/About";
+import AdminSignIn from "@/pages/AdminSignIn";
 import Archived from "@/pages/Archived";
 import AuthCallback from "@/pages/AuthCallback";
 import Explore from "@/pages/Explore";
@@ -15,12 +16,10 @@ import Resources from "@/pages/Resources";
 import Setting from "@/pages/Setting";
 import SignIn from "@/pages/SignIn";
 import SignUp from "@/pages/SignUp";
-import Timeline from "@/pages/Timeline";
 import UserProfile from "@/pages/UserProfile";
 
 export enum Routes {
-  HOME = "/",
-  TIMELINE = "/timeline",
+  ROOT = "/",
   RESOURCES = "/resources",
   INBOX = "/inbox",
   ARCHIVED = "/archived",
@@ -44,6 +43,10 @@ const router = createBrowserRouter([
             element: <SignIn />,
           },
           {
+            path: "admin",
+            element: <AdminSignIn />,
+          },
+          {
             path: "signup",
             element: <SignUp />,
           },
@@ -54,16 +57,12 @@ const router = createBrowserRouter([
         ],
       },
       {
-        path: "/",
-        element: <HomeLayout />,
+        path: Routes.ROOT,
+        element: <RootLayout />,
         children: [
           {
-            path: Routes.HOME,
+            path: "",
             element: <Home />,
-          },
-          {
-            path: Routes.TIMELINE,
-            element: <Timeline />,
           },
           {
             path: Routes.RESOURCES,

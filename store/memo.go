@@ -76,15 +76,22 @@ type FindMemo struct {
 	Random          bool
 
 	// Pagination
-	Limit            *int
-	Offset           *int
+	Limit  *int
+	Offset *int
+
+	// Ordering
 	OrderByUpdatedTs bool
 	OrderByPinned    bool
+	OrderByTimeAsc   bool
 }
 
 type FindMemoPayload struct {
-	Raw *string
-	Tag *string
+	Raw                *string
+	TagSearch          []string
+	HasLink            bool
+	HasTaskList        bool
+	HasCode            bool
+	HasIncompleteTasks bool
 }
 
 type UpdateMemo struct {

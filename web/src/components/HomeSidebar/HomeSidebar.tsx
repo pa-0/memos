@@ -1,7 +1,10 @@
 import clsx from "clsx";
+import { useLocation } from "react-router-dom";
+import useDebounce from "react-use/lib/useDebounce";
 import SearchBar from "@/components/SearchBar";
 import UserStatisticsView from "@/components/UserStatisticsView";
 import useCurrentUser from "@/hooks/useCurrentUser";
+import { useMemoList, useMemoMetadataStore } from "@/store/v1";
 import TagsSection from "./TagsSection";
 
 interface Props {
@@ -9,7 +12,18 @@ interface Props {
 }
 
 const HomeSidebar = (props: Props) => {
-  const currentUser = useCurrentUser();
+  const location = useLocation();
+  const user = useCurrentUser();
+  const memoList = useMemoList();
+  const memoMetadataStore = useMemoMetadataStore();
+
+  useDebounce(
+    async () => {
+      await memoMetadataStore.fetchMemoMetadata({ user, location });
+    },
+    300,
+    [memoList.size(), user, location.pathname],
+  );
 
   return (
     <aside
@@ -19,7 +33,7 @@ const HomeSidebar = (props: Props) => {
       )}
     >
       <SearchBar />
-      <UserStatisticsView user={currentUser} />
+      <UserStatisticsView />
       <TagsSection />
     </aside>
   );

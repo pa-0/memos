@@ -1,7 +1,10 @@
 import { Link as MLink, Tooltip } from "@mui/joy";
 import { useState } from "react";
 import { markdownServiceClient } from "@/grpcweb";
+import { useWorkspaceSettingStore } from "@/store/v1";
 import { LinkMetadata } from "@/types/proto/api/v1/markdown_service";
+import { WorkspaceMemoRelatedSetting } from "@/types/proto/api/v1/workspace_setting_service";
+import { WorkspaceSettingKey } from "@/types/proto/store/workspace_setting";
 
 interface Props {
   url: string;
@@ -18,11 +21,20 @@ const getFaviconWithGoogleS2 = (url: string) => {
 };
 
 const Link: React.FC<Props> = ({ text, url }: Props) => {
+  const workspaceSettingStore = useWorkspaceSettingStore();
+  const workspaceMemoRelatedSetting =
+    workspaceSettingStore.getWorkspaceSettingByKey(WorkspaceSettingKey.MEMO_RELATED).memoRelatedSetting ||
+    WorkspaceMemoRelatedSetting.fromPartial({});
   const [initialized, setInitialized] = useState<boolean>(false);
   const [showTooltip, setShowTooltip] = useState<boolean>(false);
   const [linkMetadata, setLinkMetadata] = useState<LinkMetadata | undefined>();
 
   const handleMouseEnter = async () => {
+    if (!workspaceMemoRelatedSetting.enableLinkPreview) {
+      return;
+    }
+
+    setShowTooltip(true);
     if (!initialized) {
       try {
         const linkMetadata = await markdownServiceClient.getLinkMetadata({ link: url });
@@ -32,7 +44,6 @@ const Link: React.FC<Props> = ({ text, url }: Props) => {
       }
       setInitialized(true);
     }
-    setTimeout(() => setShowTooltip(true), 0);
   };
 
   return (

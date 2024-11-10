@@ -1,8 +1,7 @@
-import { Dropdown, IconButton, Menu, MenuButton, MenuItem } from "@mui/joy";
-import { Link } from "@mui/joy";
-import toast from "react-hot-toast";
-import Icon from "@/components/Icon";
-import showPreviewMarkdownDialog from "@/components/PreviewMarkdownDialog";
+import { Dropdown, Menu, MenuButton, MenuItem, Link } from "@mui/joy";
+import { Button } from "@usememos/mui";
+import { CheckSquareIcon, Code2Icon, SquareSlashIcon } from "lucide-react";
+import { useTranslate } from "@/utils/i18n";
 import { EditorRefActions } from "../Editor";
 
 interface Props {
@@ -10,6 +9,8 @@ interface Props {
 }
 
 const MarkdownMenu = (props: Props) => {
+  const t = useTranslate();
+
   const { editorRef } = props;
 
   const handleCodeBlockClick = () => {
@@ -59,44 +60,25 @@ const MarkdownMenu = (props: Props) => {
     });
   };
 
-  const handlePreviewClick = () => {
-    const content = editorRef.current?.getContent() ?? "";
-    if (content === "") {
-      toast.error("Nothing to preview");
-      return;
-    }
-
-    showPreviewMarkdownDialog(editorRef.current?.getContent() ?? "");
-  };
-
   return (
     <Dropdown>
-      <MenuButton
-        slots={{ root: IconButton }}
-        slotProps={{
-          root: {
-            size: "sm",
-          },
-        }}
-      >
-        <Icon.SquareSlash className="w-5 h-5 mx-auto" />
+      <MenuButton slots={{ root: "div" }}>
+        <Button size="sm" variant="plain">
+          <SquareSlashIcon className="w-5 h-5 mx-auto" />
+        </Button>
       </MenuButton>
       <Menu className="text-sm" size="sm" placement="bottom-start">
         <MenuItem onClick={handleCodeBlockClick}>
-          <Icon.Code2 className="w-4 h-auto" />
-          <span>Code block</span>
+          <Code2Icon className="w-4 h-auto" />
+          <span>{t("markdown.code-block")}</span>
         </MenuItem>
         <MenuItem onClick={handleCheckboxClick}>
-          <Icon.CheckSquare className="w-4 h-auto" />
-          <span>Checkbox</span>
-        </MenuItem>
-        <MenuItem onClick={handlePreviewClick}>
-          <Icon.GanttChartSquare className="w-4 h-auto" />
-          <span>Preview</span>
+          <CheckSquareIcon className="w-4 h-auto" />
+          <span>{t("markdown.checkbox")}</span>
         </MenuItem>
         <div className="-mt-0.5 pl-2">
           <Link fontSize={12} href="https://www.usememos.com/docs/getting-started/content-syntax" target="_blank">
-            Content syntax
+            {t("markdown.content-syntax")}
           </Link>
         </div>
       </Menu>

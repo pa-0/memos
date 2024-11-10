@@ -43,6 +43,7 @@ type FindResource struct {
 	UID            *string
 	CreatorID      *int32
 	Filename       *string
+	FilenameSearch *string
 	MemoID         *int32
 	HasRelatedMemo bool
 	StorageType    *storepb.ResourceStorageType
@@ -146,7 +147,7 @@ func (s *Store) DeleteResource(ctx context.Context, delete *DeleteResource) erro
 			}
 			return nil
 		}(); err != nil {
-			slog.Warn("Failed to delete s3 object", err)
+			slog.Warn("Failed to delete s3 object", slog.Any("err", err))
 		}
 	}
 

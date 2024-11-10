@@ -1,5 +1,7 @@
-import { Button, Dropdown, Input, Menu, MenuButton, MenuItem, Radio, RadioGroup } from "@mui/joy";
+import { Dropdown, Menu, MenuButton, MenuItem, Radio, RadioGroup } from "@mui/joy";
+import { Button, Input } from "@usememos/mui";
 import { sortBy } from "lodash-es";
+import { MoreVerticalIcon } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { userServiceClient } from "@/grpcweb";
@@ -9,8 +11,6 @@ import { RowStatus } from "@/types/proto/api/v1/common";
 import { User, User_Role } from "@/types/proto/api/v1/user_service";
 import { useTranslate } from "@/utils/i18n";
 import showChangeMemberPasswordDialog from "../ChangeMemberPasswordDialog";
-import { showCommonDialog } from "../Dialog/CommonDialog";
-import Icon from "../Icon";
 
 interface State {
   creatingUser: User;
@@ -101,23 +101,18 @@ const MemberSection = () => {
     showChangeMemberPasswordDialog(user);
   };
 
-  const handleArchiveUserClick = (user: User) => {
-    showCommonDialog({
-      title: t("setting.member-section.archive-member"),
-      content: t("setting.member-section.archive-warning", { username: user.nickname }),
-      style: "danger",
-      dialogName: "archive-user-dialog",
-      onConfirm: async () => {
-        await userServiceClient.updateUser({
-          user: {
-            name: user.name,
-            rowStatus: RowStatus.ARCHIVED,
-          },
-          updateMask: ["row_status"],
-        });
-        fetchUsers();
-      },
-    });
+  const handleArchiveUserClick = async (user: User) => {
+    const confirmed = window.confirm(t("setting.member-section.archive-warning", { username: user.nickname }));
+    if (confirmed) {
+      await userServiceClient.updateUser({
+        user: {
+          name: user.name,
+          rowStatus: RowStatus.ARCHIVED,
+        },
+        updateMask: ["row_status"],
+      });
+      fetchUsers();
+    }
   };
 
   const handleRestoreUserClick = async (user: User) => {
@@ -131,17 +126,12 @@ const MemberSection = () => {
     fetchUsers();
   };
 
-  const handleDeleteUserClick = (user: User) => {
-    showCommonDialog({
-      title: t("setting.member-section.delete-member"),
-      content: t("setting.member-section.delete-warning", { username: user.nickname }),
-      style: "danger",
-      dialogName: "delete-user-dialog",
-      onConfirm: async () => {
-        await userStore.deleteUser(user.name);
-        fetchUsers();
-      },
-    });
+  const handleDeleteUserClick = async (user: User) => {
+    const confirmed = window.confirm(t("setting.member-section.delete-warning", { username: user.nickname }));
+    if (confirmed) {
+      await userStore.deleteUser(user.name);
+      fetchUsers();
+    }
   };
 
   return (
@@ -169,7 +159,9 @@ const MemberSection = () => {
           </RadioGroup>
         </div>
         <div className="mt-2">
-          <Button onClick={handleCreateUserBtnClick}>{t("common.create")}</Button>
+          <Button color="primary" onClick={handleCreateUserBtnClick}>
+            {t("common.create")}
+          </Button>
         </div>
       </div>
       <div className="w-full flex flex-row justify-between items-center mt-6">
@@ -215,7 +207,7 @@ const MemberSection = () => {
                     ) : (
                       <Dropdown>
                         <MenuButton size="sm">
-                          <Icon.MoreVertical className="w-4 h-auto" />
+                          <MoreVerticalIcon className="w-4 h-auto" />
                         </MenuButton>
                         <Menu placement="bottom-end" size="sm">
                           <MenuItem onClick={() => handleChangePasswordClick(user)}>

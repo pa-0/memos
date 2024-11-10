@@ -1,9 +1,10 @@
 import { Option, Select } from "@mui/joy";
-import { LucideIcon } from "lucide-react";
+import { CogIcon, DatabaseIcon, KeyIcon, LibraryIcon, LucideIcon, Settings2Icon, UserIcon, UsersIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Icon from "@/components/Icon";
+import { useLocation } from "react-router-dom";
 import MobileHeader from "@/components/MobileHeader";
 import MemberSection from "@/components/Settings/MemberSection";
+import MemoRelatedSettings from "@/components/Settings/MemoRelatedSettings";
 import MyAccountSection from "@/components/Settings/MyAccountSection";
 import PreferencesSection from "@/components/Settings/PreferencesSection";
 import SSOSection from "@/components/Settings/SSOSection";
@@ -17,25 +18,27 @@ import { User_Role } from "@/types/proto/api/v1/user_service";
 import { WorkspaceSettingKey } from "@/types/proto/store/workspace_setting";
 import { useTranslate } from "@/utils/i18n";
 
-type SettingSection = "my-account" | "preference" | "member" | "system" | "storage" | "sso";
+type SettingSection = "my-account" | "preference" | "member" | "system" | "memo-related" | "storage" | "sso";
 
 interface State {
   selectedSection: SettingSection;
 }
 
 const BASIC_SECTIONS: SettingSection[] = ["my-account", "preference"];
-const ADMIN_SECTIONS: SettingSection[] = ["member", "system", "storage", "sso"];
+const ADMIN_SECTIONS: SettingSection[] = ["member", "system", "memo-related", "storage", "sso"];
 const SECTION_ICON_MAP: Record<SettingSection, LucideIcon> = {
-  "my-account": Icon.User,
-  preference: Icon.Cog,
-  member: Icon.Users,
-  system: Icon.Settings2,
-  storage: Icon.Database,
-  sso: Icon.Key,
+  "my-account": UserIcon,
+  preference: CogIcon,
+  member: UsersIcon,
+  system: Settings2Icon,
+  "memo-related": LibraryIcon,
+  storage: DatabaseIcon,
+  sso: KeyIcon,
 };
 
 const Setting = () => {
   const t = useTranslate();
+  const location = useLocation();
   const commonContext = useCommonContext();
   const user = useCurrentUser();
   const workspaceSettingStore = useWorkspaceSettingStore();
@@ -53,6 +56,17 @@ const Setting = () => {
   }, [isHost]);
 
   useEffect(() => {
+    let hash = location.hash.slice(1) as SettingSection;
+    // If the hash is not a valid section, redirect to the default section.
+    if (![...BASIC_SECTIONS, ...ADMIN_SECTIONS].includes(hash)) {
+      hash = "my-account";
+    }
+    setState({
+      selectedSection: hash,
+    });
+  }, [location.hash]);
+
+  useEffect(() => {
     if (!isHost) {
       return;
     }
@@ -66,9 +80,7 @@ const Setting = () => {
   }, [isHost]);
 
   const handleSectionSelectorItemClick = useCallback((settingSection: SettingSection) => {
-    setState({
-      selectedSection: settingSection,
-    });
+    window.location.hash = settingSection;
   }, []);
 
   return (
@@ -102,7 +114,9 @@ const Setting = () => {
                       onClick={() => handleSectionSelectorItemClick(item)}
                     />
                   ))}
-                  <span className="px-3 mt-2 opacity-70 text-sm">Version: v{commonContext.profile.version}</span>
+                  <span className="px-3 mt-2 opacity-70 text-sm">
+                    {t("setting.version")}: v{commonContext.profile.version}
+                  </span>
                 </div>
               </>
             ) : null}
@@ -125,6 +139,8 @@ const Setting = () => {
               <MemberSection />
             ) : state.selectedSection === "system" ? (
               <WorkspaceSection />
+            ) : state.selectedSection === "memo-related" ? (
+              <MemoRelatedSettings />
             ) : state.selectedSection === "storage" ? (
               <StorageSection />
             ) : state.selectedSection === "sso" ? (

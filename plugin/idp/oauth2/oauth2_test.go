@@ -67,7 +67,7 @@ func TestNewIdentityProvider(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+		t.Run(test.name, func(*testing.T) {
 			_, err := NewIdentityProvider(test.config)
 			assert.ErrorContains(t, err, test.containsErr)
 		})
@@ -98,7 +98,7 @@ func newMockServer(t *testing.T, code, accessToken string, userinfo []byte) *htt
 		})
 		require.NoError(t, err)
 	})
-	mux.HandleFunc("/oauth2/userinfo", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/oauth2/userinfo", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, err := w.Write(userinfo)
 		require.NoError(t, err)

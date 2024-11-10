@@ -18,3 +18,10 @@
     word-break: normal;
   }
 }
+
+html.dark {
+  color-scheme: dark;
+}
+html.light {
+  color-scheme: light;
+}

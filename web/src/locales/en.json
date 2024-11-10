@@ -9,6 +9,7 @@
   },
   "common": {
     "about": "About",
+    "add": "Add",
     "admin": "Admin",
     "archive": "Archive",
     "archived": "Archived",
@@ -20,6 +21,7 @@
     "clear": "Clear",
     "close": "Close",
     "confirm": "Confirm",
+    "collapse": "Collapse",
     "create": "Create",
     "database": "Database",
     "days": "Days",
@@ -27,6 +29,7 @@
     "description": "Description",
     "edit": "Edit",
     "email": "Email",
+    "expand": "Expand",
     "explore": "Explore",
     "file": "File",
     "filter": "Filter",
@@ -102,10 +105,7 @@
     "copy-link": "Copy Link",
     "count-memos-in-date": "{{count}} memos in {{date}}",
     "delete-confirm": "Are you sure you want to delete this memo? THIS ACTION IS IRREVERSIBLE",
-    "delete-memo": "Delete Memo",
-    "embed": "Embed",
-    "fetch-more": "Click to fetch more",
-    "fetching-data": "Fetching data…",
+    "load-more": "Load more",
     "no-archived-memos": "No archived memos.",
     "search-placeholder": "Search memos",
     "show-more": "Show more",
@@ -116,7 +116,9 @@
       "protected": "Workspace",
       "public": "Public"
     },
-    "wrapping": "Wrapping"
+    "links": "Links",
+    "to-do": "To-do",
+    "code": "Code"
   },
   "message": {
     "archived-successfully": "Archived successfully",
@@ -233,7 +235,9 @@
       "template": "Template",
       "token-endpoint": "Token endpoint",
       "update-sso": "Update SSO",
-      "user-endpoint": "User endpoint"
+      "user-endpoint": "User endpoint",
+      "no-sso-found": "No SSO found.",
+      "configuring-keycloak-for-authentication": "Configuring Keycloak for Authentication"
     },
     "storage": "Storage",
     "storage-section": {
@@ -287,13 +291,48 @@
       "disable-password-login-final-warning": "Please type \"CONFIRM\" if you know what you are doing.",
       "disable-password-login-warning": "This will disable password login for all users. It is not possible to log in without reverting this setting in the database if your configured identity providers fail. You’ll also have to be extra carefull when removing an identity provider",
       "disable-public-memos": "Disable public memos",
+      "disable-markdown-shortcuts-in-editor": "Disable Markdown shortcuts in editor",
       "display-with-updated-time": "Display with updated time",
+      "enable-auto-compact": "Enable auto compact",
+      "enable-double-click-to-edit": "Enable double click to edit",
       "enable-password-login": "Enable password login",
       "enable-password-login-warning": "This will enable password login for all users. Continue only if you want to users to be able to log in using both SSO and password",
       "max-upload-size": "Maximum upload size (MiB)",
       "max-upload-size-hint": "Recommended value is 32 MiB.",
       "server-name": "Server Name"
-    }
+    },
+    "memo-related": "Memo",
+    "access-token-section":{
+      "title": "Access Tokens",
+      "description": "A list of all access tokens for your account.",
+      "created-at": "Created At",
+      "expires-at": "Expires At",
+      "token": "Token"
+    },
+    "webhook-section": {
+      "title": "Webhooks",
+      "url": "Url",
+      "no-webhooks-found": "No webhooks found."
+    },
+    "workspace-section": {
+      "disallow-user-registration": "Disallow user registration",
+      "disallow-password-auth": "Disallow password auth",
+      "disallow-change-username": "Disallow Change Username",
+      "disallow-change-nickname": "Disallow Change Nickname",
+      "week-start-day": "Week start day",
+      "saturday": "Saturday",
+      "sunday": "Sunday",
+      "monday": "Monday"            
+    },
+    "memo-related-settings": {
+      "title": "Memo related settings",
+      "enable-link-preview": "Enable link preview",
+      "enable-memo-comments": "Enable memo comments",
+      "enable-memo-location": "Enable memo location",
+      "content-lenght-limit": "Content length limit(Byte)",
+      "reactions": "Reactions"
+    },
+    "version": "Version"
   },
   "tag": {
     "all-tags": "All Tags",
@@ -303,7 +342,9 @@
     "delete-tag": "Delete Tag",
     "no-tag-found": "No tag found"
   },
-  "timeline": {
-    "title": "Timeline"
+  "markdown": {
+    "code-block": "Code block",
+    "checkbox": "Checkbox",
+    "content-syntax": "Content syntax"
   }
 }

@@ -1,13 +1,18 @@
+import { uniqueId } from "lodash-es";
 import { create } from "zustand";
 import { combine } from "zustand/middleware";
 import { memoServiceClient } from "@/grpcweb";
-import { CreateMemoRequest, ListMemosRequest, Memo } from "@/types/proto/api/v1/memo_service";
+import { CreateMemoRequest, ListMemosRequest, Memo, MemoView } from "@/types/proto/api/v1/memo_service";
 
 interface State {
+  // stateId is used to identify the store instance state.
+  // It should be update when any state change.
+  stateId: string;
   memoMapByName: Record<string, Memo>;
 }
 
 const getDefaultState = (): State => ({
+  stateId: uniqueId(),
   memoMapByName: {},
 });
 
@@ -16,12 +21,15 @@ export const useMemoStore = create(
     setState: (state: State) => set(state),
     getState: () => get(),
     fetchMemos: async (request: Partial<ListMemosRequest>) => {
-      const { memos, nextPageToken } = await memoServiceClient.listMemos(request);
-      const memoMap = get().memoMapByName;
+      const { memos, nextPageToken } = await memoServiceClient.listMemos({
+        ...request,
+        view: MemoView.MEMO_VIEW_FULL,
+      });
+      const memoMap = { ...get().memoMapByName };
       for (const memo of memos) {
         memoMap[memo.name] = memo;
       }
-      set({ memoMapByName: memoMap });
+      set({ stateId: uniqueId(), memoMapByName: memoMap });
       return { memos, nextPageToken };
     },
     getOrFetchMemoByName: async (name: string, options?: { skipCache?: boolean; skipStore?: boolean }) => {
@@ -36,23 +44,21 @@ export const useMemoStore = create(
       });
       if (!options?.skipStore) {
         memoMap[name] = memo;
-        set({ memoMapByName: memoMap });
+        set({ stateId: uniqueId(), memoMapByName: memoMap });
       }
       return memo;
     },
     getMemoByName: (name: string) => {
       return get().memoMapByName[name];
     },
-    searchMemos: async (filter: string) => {
-      const { memos } = await memoServiceClient.searchMemos({
-        filter,
+    fetchMemoByUid: async (uid: string) => {
+      const memo = await memoServiceClient.getMemoByUid({
+        uid,
       });
       const memoMap = get().memoMapByName;
-      for (const memo of memos) {
-        memoMap[memo.name] = memo;
-      }
-      set({ memoMapByName: memoMap });
-      return memos;
+      memoMap[memo.name] = memo;
+      set({ stateId: uniqueId(), memoMapByName: memoMap });
+      return memo;
     },
     getMemoByUid: (uid: string) => {
       const memoMap = get().memoMapByName;
@@ -62,7 +68,7 @@ export const useMemoStore = create(
       const memo = await memoServiceClient.createMemo(request);
       const memoMap = get().memoMapByName;
       memoMap[memo.name] = memo;
-      set({ memoMapByName: memoMap });
+      set({ stateId: uniqueId(), memoMapByName: memoMap });
       return memo;
     },
     updateMemo: async (update: Partial<Memo>, updateMask: string[]) => {
@@ -73,7 +79,7 @@ export const useMemoStore = create(
 
       const memoMap = get().memoMapByName;
       memoMap[memo.name] = memo;
-      set({ memoMapByName: memoMap });
+      set({ stateId: uniqueId(), memoMapByName: memoMap });
       return memo;
     },
     deleteMemo: async (name: string) => {
@@ -83,7 +89,7 @@ export const useMemoStore = create(
 
       const memoMap = get().memoMapByName;
       delete memoMap[name];
-      set({ memoMapByName: memoMap });
+      set({ stateId: uniqueId(), memoMapByName: memoMap });
     },
   })),
 );
@@ -93,7 +99,7 @@ export const useMemoList = () => {
   const memos = Object.values(memoStore.getState().memoMapByName);
 
   const reset = () => {
-    memoStore.setState({ memoMapByName: {} });
+    memoStore.setState({ stateId: uniqueId(), memoMapByName: {} });
   };
 
   const size = () => {

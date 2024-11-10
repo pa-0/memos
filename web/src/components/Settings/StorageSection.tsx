@@ -1,9 +1,11 @@
-import { Button, Divider, Input, List, ListItem, Radio, RadioGroup, Tooltip } from "@mui/joy";
+import { Divider, List, ListItem, Radio, RadioGroup, Tooltip } from "@mui/joy";
+import { Button, Input } from "@usememos/mui";
 import { isEqual } from "lodash-es";
+import { HelpCircleIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
 import { Link } from "react-router-dom";
-import { WorkspaceSettingPrefix, useWorkspaceSettingStore } from "@/store/v1";
+import { workspaceSettingNamePrefix, useWorkspaceSettingStore } from "@/store/v1";
 import {
   WorkspaceStorageSetting,
   WorkspaceStorageSetting_S3Config,
@@ -11,7 +13,6 @@ import {
 } from "@/types/proto/api/v1/workspace_setting_service";
 import { WorkspaceSettingKey } from "@/types/proto/store/workspace_setting";
 import { useTranslate } from "@/utils/i18n";
-import Icon from "../Icon";
 
 const StorageSection = () => {
   const t = useTranslate();
@@ -107,7 +108,7 @@ const StorageSection = () => {
 
   const saveWorkspaceStorageSetting = async () => {
     await workspaceSettingStore.setWorkspaceSetting({
-      name: `${WorkspaceSettingPrefix}${WorkspaceSettingKey.STORAGE}`,
+      name: `${workspaceSettingNamePrefix}${WorkspaceSettingKey.STORAGE}`,
       storageSetting: workspaceStorageSetting,
     });
     toast.success("Updated");
@@ -132,17 +133,10 @@ const StorageSection = () => {
         <div className="flex flex-row items-center">
           <span className="text-gray-700 dark:text-gray-500 mr-1">{t("setting.system-section.max-upload-size")}</span>
           <Tooltip title={t("setting.system-section.max-upload-size-hint")} placement="top">
-            <Icon.HelpCircle className="w-4 h-auto" />
+            <HelpCircleIcon className="w-4 h-auto" />
           </Tooltip>
         </div>
-        <Input
-          className="w-16"
-          sx={{
-            fontFamily: "monospace",
-          }}
-          value={workspaceStorageSetting.uploadSizeLimitMb}
-          onChange={handleMaxUploadSizeChanged}
-        />
+        <Input className="w-16 font-mono" value={workspaceStorageSetting.uploadSizeLimitMb} onChange={handleMaxUploadSizeChanged} />
       </div>
       {workspaceStorageSetting.storageType !== WorkspaceStorageSetting_StorageType.DATABASE && (
         <div className="w-full flex flex-row justify-between items-center">
@@ -183,7 +177,7 @@ const StorageSection = () => {
         </>
       )}
       <div>
-        <Button disabled={!allowSaveStorageSetting} onClick={saveWorkspaceStorageSetting}>
+        <Button color="primary" disabled={!allowSaveStorageSetting} onClick={saveWorkspaceStorageSetting}>
           {t("common.save")}
         </Button>
       </div>
